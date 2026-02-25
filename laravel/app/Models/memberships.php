@@ -9,4 +9,5 @@ class memberships extends Model
 {
     /** @use HasFactory<\Database\Factories\MembershipsFactory> */
     use HasFactory;
+ 
 }
