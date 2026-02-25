@@ -13,11 +13,13 @@ return new class extends Migration
     {
         Schema::create('memberships', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-    $table->foreignId('colocation_id')->constrained()->onDelete('cascade');
+    $table->foreignId('user_id')->constrained();
+    $table->foreignId('colocation_id')->constrained();
      $table->enum('role', ['owner', 'member'])->default('member');
+     $table->boolean('active')->default(true);
      $table->timestamp('left_at')->nullable();
-            $table->timestamps();
+      $table->timestamps();
+    //   $table->unique(['user_id', 'colocation_id']);
         });
     }
 

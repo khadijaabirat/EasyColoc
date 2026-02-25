@@ -22,6 +22,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'is_banned',
     ];
 
     /**
@@ -39,9 +40,29 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-  protected $casts = [
-    'email_verified_at' => 'datetime',
-    'password' => 'hashed',
-    'is_banned' => 'boolean',
-];
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'is_banned' => 'boolean',
+        ];
+    }
+
+public function colocationsOwned(){
+    return $this->hasMany(Colocations::class,'owner_id');
+}
+ public function memberships()
+    {
+ return $this->hasMany(memberships::class);
+    }
+ public function colocationsJoined()
+    {
+ return $this->belongsToMany(
+            Colocations::class,
+            'memberships',
+            'user_id',
+            'colocation_id'
+        )->withPivot('role', 'left_at')->withTimestamps();
+    }
 }

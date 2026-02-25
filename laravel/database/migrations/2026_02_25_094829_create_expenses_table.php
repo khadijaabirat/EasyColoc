@@ -16,9 +16,9 @@ return new class extends Migration
     $table->string('title');
     $table->decimal('amount', 10, 2);
     $table->date('date');
-    $table->foreignId('payer_id')->constrained('users')->onDelete('cascade');
-    $table->foreignId('category_id')->constrained()->onDelete('cascade');
-    $table->foreignId('colocation_id')->constrained()->onDelete('cascade');  
+    $table->foreignId('payer_id')->constrained('users');
+    $table->foreignId('category_id')->constrained();
+    $table->foreignId('colocation_id')->constrained();
     $table->timestamps();
         });
     }

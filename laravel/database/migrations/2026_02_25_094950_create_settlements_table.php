@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('settlements', function (Blueprint $table) {
             $table->id();
-    $table->foreignId('colocation_id')->constrained()->onDelete('cascade');
+    $table->foreignId('colocation_id')->constrained();
     $table->foreignId('debtor_id')->constrained('users');
     $table->foreignId('creditor_id')->constrained('users');
     $table->decimal('amount', 10, 2);
-    $table->boolean('is_paid')->default(false);  
+    $table->boolean('is_paid')->default(false);
     $table->timestamps();
         });
     }
