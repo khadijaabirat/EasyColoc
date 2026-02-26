@@ -2,10 +2,122 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Colocations;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
 
 class ColocationsController extends Controller
 {
+    public function index()
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        $activeColoc = $user->colocations()->wherePivotNull('left_at')->exists();
+        if ($activeColoc) {
+            return view('dashboard', compact('activeColoc'));
+        }
+        return view('colocations.create');
+    }
+
+public function create()
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        if ($user->colocations()->wherePivotNull('left_at')->exists()) {
+            return redirect()->route('colocations.index');
+        }
+        return view('colocations.create');
+    }
+
+
+
+    public function store(Request $request)
+    {
+        $request->validate([
+    'name' => 'required|string|max:255|min:3',
+]);
+        /** @var User $user */
+        $user = Auth::user();
+        $hasActiveColoc = $user->colocations()->wherePivotNull('left_at')->exists();
+        if ($hasActiveColoc) {
+            return redirect()->back()->with('error', 'Vous avez déjà une colocation active.');
+        }
+         DB::transaction(function () use ($request, $user) {
+             $colocation = Colocations::create([
+                'name' => $request->name,
+                'status' => 'active',
+                'owner_id' => $user->id,
+            ]);
+             $colocation->members()->attach($user->id, [
+                'role' => 'owner',
+                'joined_at' => now(),
+                'left_at' => null,
+            ]);
+        });
+        return redirect()->route('colocations.index')->with('success', 'Colocation créée avec succès !');
+    }
+
+
+    private function authorizeMember(Colocations $colocation)
+    {
+       if (!$colocation->members->contains(Auth::id())) {
+        abort(403, "Vous n'êtes pas membre de cette colocation.");
+        }
+    }
+
+
+    public function show(Colocations $colocation)
+    {
+     $this->authorizeMember($colocation);
+  $colocation->load(['members', 'expenses.category']);
+   return view('colocations.show', compact('colocation'));
+    }
+
+
+public function leave(Colocations $colocation)
+{
+    $user = auth()->user();
+     $membership = $colocation->members()->where('user_id', $user->id)->first();
+    if ($membership && $membership->pivot->role !== 'owner') {
+        $colocation->members()->updateExistingPivot($user->id, [
+            'left_at' => now()
+        ]);
+        return redirect()->route('dashboard')
+        ->with('success', 'Vous avez quitté la colocation.');
+    }
+        $memberCount = $colocation->members()->wherePivot('left_at', null)->count();
+   if ($memberCount === 1) {
+         $colocation->update(['status' => 'cancelled']);
+        $colocation->members()->updateExistingPivot($user->id, [
+            'left_at' => now()
+        ]);
+        return redirect()->route('dashboard')
+        ->with('success', 'Colocation annulée, vous étiez le seul membre.');
+    }
+    return back()->with('error', 'owner ne peut pas quitter sans annuler la colocation.');
+}
+
+
+public function cancel(Colocations $colocation)
+{
+    if ($colocation->members()->wherePivot('user_id', auth()->id())
+        ->wherePivot('role', 'owner')->exists())
+    {
+        $colocation->update(['status' => 'cancelled']);
+         $colocation->members()->updateExistingPivot($colocation->members->pluck('id'), ['left_at' => now()]);
+
+        return redirect()->route('dashboard')->with('success', 'La colocation a été annulée.');
+    }
+
+    abort(403, "Action non autorisée.");
+}
+
+
+
+
 //     $colocation = Colocation::find($colocationId);
 
 //  if($colocation->owner->is_banned) {

@@ -18,8 +18,9 @@ return new class extends Migration
      $table->enum('role', ['owner', 'member'])->default('member');
      $table->boolean('active')->default(true);
      $table->timestamp('left_at')->nullable();
+     $table->timestamp('joined_at')->nullable();
       $table->timestamps();
-    //   $table->unique(['user_id', 'colocation_id']);
+      $table->unique(['user_id', 'colocation_id']);
         });
     }
 

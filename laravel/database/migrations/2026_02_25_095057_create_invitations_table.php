@@ -16,7 +16,7 @@ return new class extends Migration
     $table->string('email');
     $table->string('token')->unique();
     $table->foreignId('colocation_id')->constrained();
-    $table->enum('status', ['pending', 'accepted', 'refused'])->default('pending');
+    $table->enum('status', ['pending', 'accepted', 'rejected'])->default('pending');
     $table->timestamps();
         });
     }
