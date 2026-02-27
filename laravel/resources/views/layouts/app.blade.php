@@ -76,10 +76,10 @@
                 @endif
             </nav>
 
-            <div class="absolute bottom-8 left-0 w-full px-6">
+            <div class="mt-auto">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button type="submit" class="nav-item w-full text-left border-none bg-transparent cursor-pointer hover:bg-red-50 hover:text-red-600">
+                    <button type="submit" class="nav-item text-left border-none bg-transparent cursor-pointer hover:bg-red-50 hover:text-red-600" style="color: #ef4444;">
                         <i class="fas fa-sign-out-alt w-6"></i>
                         <span class="nav-label">Déconnexion</span>
                     </button>
