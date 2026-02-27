@@ -7,6 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class invitation extends Model
 {
-    /** @use HasFactory<\Database\Factories\InvitationFactory> */
     use HasFactory;
+
+    protected $fillable = [
+        'email',
+        'token',
+        'colocation_id',
+        'status',
+    ];
+
+    public function colocation()
+    {
+        return $this->belongsTo(Colocations::class);
+    }
 }

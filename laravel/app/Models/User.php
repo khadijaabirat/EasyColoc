@@ -45,6 +45,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_banned' => 'boolean',
+            'reputation_score' => 'integer',
         ];
     }
 
@@ -78,7 +79,9 @@ public function ownedColocations()
     {
         return $this->hasMany(settlements::class, 'creditor_id');
     }
-    public function isAdmin(): bool
+ 
+
+    public function isGlobalAdmin(): bool
     {
         return $this->role === 'admin';
     }

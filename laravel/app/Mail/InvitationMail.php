@@ -9,7 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Colocations;
-class TnvitationMail extends Mailable
+class InvitationMail extends Mailable
 {
     use Queueable, SerializesModels;
 public $colocation;

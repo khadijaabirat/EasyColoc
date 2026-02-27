@@ -20,11 +20,11 @@ class Colocations extends Model
     }
     public function expenses()
     {
-        return $this->hasMany(expenses::class);
+        return $this->hasMany(expenses::class, 'colocation_id');
     }
     public function categories()
     {
-        return $this->hasMany(categories::class);
+        return $this->hasMany(categories::class, 'colocation_id');
     }
     public function invitations()
     {
@@ -32,11 +32,11 @@ class Colocations extends Model
     }
     public function settlements()
     {
-        return $this->hasMany(settlements::class);
+        return $this->hasMany(settlements::class, 'colocation_id');
     }
     public function memberships()
     {
-        return $this->hasMany(memberships::class);
+        return $this->hasMany(memberships::class, 'colocation_id');
     }
     public function owner()
     {
