@@ -1,0 +1,21 @@
+PHPUnit 11.5.50 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.12
+Configuration: C:\xampp\htdocs\EasyColoc\laravel\phpunit.xml
+
+......F                                                             7 / 7 (100%)
+
+Time: 00:03.680, Memory: 48.00 MB
+
+There was 1 failure:
+
+1) Tests\Feature\ColocationAndInvitationTest::test_owner_can_remove_member_and_inherit_debt
+Expected response status code [201, 301, 302, 303, 307, 308] but received 404.
+Failed asserting that false is true.
+
+C:\xampp\htdocs\EasyColoc\laravel\vendor\laravel\framework\src\Illuminate\Testing\TestResponseAssert.php:45
+C:\xampp\htdocs\EasyColoc\laravel\vendor\laravel\framework\src\Illuminate\Testing\TestResponse.php:199
+C:\xampp\htdocs\EasyColoc\laravel\tests\Feature\ColocationAndInvitationTest.php:159
+
+FAILURES!
+Tests: 7, Assertions: 22, Failures: 1.

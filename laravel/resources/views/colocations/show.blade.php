@@ -127,22 +127,31 @@
 
             {{-- Expenses --}}
             <div class="glass-card" style="padding:1.75rem;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
                     <div class="section-title" style="margin-bottom:0;">
                         <i class="fas fa-receipt text-emerald-500"></i> Historique des Dépenses
                     </div>
-                    @if($colocation->status === 'active')
-                        <button onclick="document.getElementById('expense-modal').style.display='flex'"
-                                style="display:flex;align-items:center;gap:0.5rem;background:#4f46e5;color:white;
-                                       border:none;padding:0.6rem 1.2rem;border-radius:10px;font-weight:600;cursor:pointer;
-                                       font-size:0.875rem;transition:all 0.2s;"
-                                onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
-                            <i class="fas fa-plus"></i> Ajouter
-                        </button>
-                    @endif
+                    <div style="display:flex;gap:1rem;align-items:center;">
+                        <form method="GET" action="{{ route('colocations.show', $colocation) }}" style="display:flex;align-items:center;gap:0.5rem;">
+                            <input type="month" name="month" value="{{ $monthFilter }}" onchange="this.form.submit()" 
+                                   style="padding:0.4rem 0.8rem;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.875rem;outline:none;color:#1e293b;">
+                            @if($monthFilter)
+                                <a href="{{ route('colocations.show', $colocation) }}" style="color:#ef4444;text-decoration:none;" title="Réinitialiser"><i class="fas fa-times-circle"></i></a>
+                            @endif
+                        </form>
+                        @if($colocation->status === 'active')
+                            <button onclick="document.getElementById('expense-modal').style.display='flex'"
+                                    style="display:flex;align-items:center;gap:0.5rem;background:#4f46e5;color:white;
+                                           border:none;padding:0.6rem 1.2rem;border-radius:10px;font-weight:600;cursor:pointer;
+                                           font-size:0.875rem;transition:all 0.2s;"
+                                    onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
+                                <i class="fas fa-plus"></i> Ajouter
+                            </button>
+                        @endif
+                    </div>
                 </div>
 
-                @if($colocation->expenses->isEmpty())
+                @if($filteredExpenses->isEmpty())
                     <div style="text-align:center;padding:3rem;color:#94a3b8;">
                         <i class="fas fa-receipt" style="font-size:3rem;margin-bottom:1rem;opacity:0.3;"></i>
                         <p style="font-weight:500;">Aucune dépense enregistrée</p>
@@ -161,7 +170,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($colocation->expenses->sortByDesc('date') as $expense)
+                            @foreach($filteredExpenses as $expense)
                                 <tr style="transition:background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
                                     <td style="font-weight:600;color:#1e293b;">{{ $expense->title }}</td>
                                     <td>
@@ -185,15 +194,22 @@
                                     </td>
                                     <td style="text-align:right;">
                                         @if($colocation->status === 'active' && ($expense->payer_id === auth()->id() || $isOwner))
-                                            <form action="{{ route('expenses.destroy', [$colocation, $expense]) }}" method="POST"
-                                                  onsubmit="return confirm('Supprimer cette dépense ?')" style="display:inline;">
-                                                @csrf @method('DELETE')
-                                                <button type="submit"
-                                                        style="background:none;border:none;cursor:pointer;color:#ef4444;padding:0.3rem;"
-                                                        title="Supprimer">
-                                                    <i class="fas fa-trash-alt"></i>
+                                            <div style="display:flex;gap:0.25rem;justify-content:flex-end;">
+                                                <button onclick="openEditModal({{ $expense->id }}, '{{ addslashes($expense->title) }}', {{ $expense->amount }}, '{{ $expense->date }}', {{ $expense->payer_id }}, '{{ $expense->category_id }}')" 
+                                                        style="background:none;border:none;cursor:pointer;color:#4f46e5;padding:0.3rem;" 
+                                                        title="Modifier">
+                                                    <i class="fas fa-edit"></i>
                                                 </button>
-                                            </form>
+                                                <form action="{{ route('expenses.destroy', [$colocation, $expense]) }}" method="POST"
+                                                      onsubmit="return confirm('Supprimer cette dépense ?')" style="display:inline;">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit"
+                                                            style="background:none;border:none;cursor:pointer;color:#ef4444;padding:0.3rem;"
+                                                            title="Supprimer">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         @endif
                                     </td>
                                 </tr>
@@ -240,44 +256,19 @@
                 <div class="section-title">
                     <i class="fas fa-scale-balanced text-amber-500"></i> Qui doit à qui ?
                 </div>
-                @php
-                    // Simplified debt calculation
-                    $debtors   = array_filter($balances, fn($b) => $b < 0);
-                    $creditors = array_filter($balances, fn($b) => $b > 0);
-                    $settlements = [];
-                    $d = $debtors; $c = $creditors;
-                    asort($d); arsort($c);
-                    $di = array_keys($d); $ci = array_keys($c);
-                    $dv = array_values($d); $cv = array_values($c);
-                    $i = 0; $j = 0;
-                    while($i < count($dv) && $j < count($cv)) {
-                        $amt = min(abs($dv[$i]), $cv[$j]);
-                        if($amt > 0.01) {
-                            $debtor  = $activeMembers->firstWhere('id', $di[$i]);
-                            $creditor= $activeMembers->firstWhere('id', $ci[$j]);
-                            if($debtor && $creditor) {
-                                $settlements[] = ['from'=>$debtor->name,'to'=>$creditor->name,'amount'=>$amt];
-                            }
-                        }
-                        $dv[$i] += $amt; $cv[$j] -= $amt;
-                        if(abs($dv[$i]) < 0.01) $i++;
-                        if(abs($cv[$j]) < 0.01) $j++;
-                    }
-                @endphp
-
-                {{-- Use DB settlements if available, fall back to computed --}}
+                {{-- Settlements from DB --}}
                 @php
                     $dbSettlements = $colocation->settlements()->where('is_paid', false)
                         ->with(['debtor','creditor'])->get();
                 @endphp
 
-                @if($dbSettlements->isEmpty() && empty($settlements))
+                @if($dbSettlements->isEmpty())
                     <div style="text-align:center;padding:2rem;color:#94a3b8;">
                         <i class="fas fa-check-circle" style="font-size:2.5rem;color:#10b981;margin-bottom:0.75rem;display:block;"></i>
                         <p style="font-weight:500;color:#374151;">Tout est réglé !</p>
                         <p style="font-size:0.8rem;margin-top:0.25rem;">Aucun remboursement nécessaire</p>
                     </div>
-                @elseif($dbSettlements->isNotEmpty())
+                @else
                     @foreach($dbSettlements as $dbS)
                         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;
                                     padding:0.875rem;margin-bottom:0.75rem;">
@@ -300,18 +291,6 @@
                                     </form>
                                 @endif
                             </div>
-                        </div>
-                    @endforeach
-                @else
-                    @foreach($settlements as $s)
-                        <div style="display:flex;align-items:center;justify-content:space-between;background:#fffbeb;
-                                    border:1px solid #fde68a;border-radius:10px;padding:0.875rem;margin-bottom:0.75rem;">
-                            <div style="font-size:0.875rem;color:#1e293b;">
-                                <span style="font-weight:600;color:#ef4444;">{{ $s['from'] }}</span>
-                                <i class="fas fa-arrow-right mx-2 text-gray-400"></i>
-                                <span style="font-weight:600;color:#10b981;">{{ $s['to'] }}</span>
-                            </div>
-                            <span style="font-weight:700;color:#92400e;font-size:0.9rem;">{{ number_format($s['amount'],2) }} €</span>
                         </div>
                     @endforeach
                 @endif
@@ -478,6 +457,91 @@
                 </form>
             </div>
         </div>
+    @endif
+
+    {{-- Edit Expense Modal --}}
+    @if($colocation->status === 'active')
+        <div id="edit-expense-modal"
+             style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;
+                    align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+            <div style="background:white;border-radius:20px;padding:2.5rem;width:100%;max-width:500px;
+                        box-shadow:0 25px 50px rgba(0,0,0,0.2);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.75rem;">
+                    <h3 style="font-family:'Outfit',sans-serif;font-size:1.3rem;font-weight:700;color:#1e293b;">
+                        <i class="fas fa-edit text-indigo-500 mr-2"></i>Modifier la dépense
+                    </h3>
+                    <button onclick="document.getElementById('edit-expense-modal').style.display='none'"
+                            style="background:#f1f5f9;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;
+                                   font-size:1rem;color:#64748b;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="edit-expense-form" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div style="margin-bottom:1.25rem;">
+                        <label style="display:block;font-size:0.83rem;font-weight:600;color:#374151;margin-bottom:0.4rem;">Titre de la dépense</label>
+                        <input type="text" name="title" id="edit-title" required 
+                               style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;"
+                               onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+                        <div>
+                            <label style="display:block;font-size:0.83rem;font-weight:600;color:#374151;margin-bottom:0.4rem;">Montant (€)</label>
+                            <input type="number" name="amount" id="edit-amount" required min="0.01" step="0.01" 
+                                   style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;"
+                                   onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:0.83rem;font-weight:600;color:#374151;margin-bottom:0.4rem;">Date</label>
+                            <input type="date" name="date" id="edit-date" required 
+                                   style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;"
+                                   onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+                        </div>
+                    </div>
+                    <div style="margin-bottom:1.25rem;">
+                        <label style="display:block;font-size:0.83rem;font-weight:600;color:#374151;margin-bottom:0.4rem;">Payeur</label>
+                        <select name="payer_id" id="edit-payer" required
+                                style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;color:#1e293b;background:white;">
+                            @foreach($activeMembers as $m)
+                                <option value="{{ $m->id }}">{{ $m->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="margin-bottom:1.75rem;">
+                        <label style="display:block;font-size:0.83rem;font-weight:600;color:#374151;margin-bottom:0.4rem;">Catégorie</label>
+                        <select name="category_id" id="edit-category"
+                                style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;color:#1e293b;background:white;">
+                            <option value="">Sans catégorie</option>
+                            @foreach($colocation->categories as $cat)
+                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:1rem;">
+                        <button type="button" onclick="document.getElementById('edit-expense-modal').style.display='none'"
+                                style="flex:1;padding:0.75rem;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-weight:600;cursor:pointer;">
+                            Annuler
+                        </button>
+                        <button type="submit"
+                                style="flex:2;padding:0.75rem;background:#4f46e5;color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+                            <i class="fas fa-save"></i> Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script>
+            function openEditModal(id, title, amount, date, payerId, categoryId) {
+                document.getElementById('edit-expense-form').action = `/colocations/{{ $colocation->id }}/expenses/${id}`;
+                document.getElementById('edit-title').value = title;
+                document.getElementById('edit-amount').value = amount;
+                document.getElementById('edit-date').value = date;
+                document.getElementById('edit-payer').value = payerId;
+                document.getElementById('edit-category').value = categoryId || '';
+                document.getElementById('edit-expense-modal').style.display = 'flex';
+            }
+        </script>
     @endif
 
 </x-app-layout>

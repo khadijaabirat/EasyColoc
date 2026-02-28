@@ -37,11 +37,9 @@ class MembershipsController extends Controller
         }
 
         // Check if the target member currently has a debt
-        $memberCount = $colocation->members()->wherePivotNull('left_at')->count();
-        $totalAmount = $colocation->expenses()->sum('amount');
-        $share       = $memberCount > 0 ? $totalAmount / $memberCount : 0;
-        $memberPaid  = $colocation->expenses()->where('payer_id', $user->id)->sum('amount');
-        $memberBalance = round($memberPaid - $share, 2);
+        // Check if the target member currently has a debt
+        $balances = \App\Http\Controllers\SettlementsController::getBalances($colocation);
+        $memberBalance = $balances[$user->id] ?? 0;
 
         DB::transaction(function () use ($colocation, $user, $memberBalance) {
             // Mark membership as left

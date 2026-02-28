@@ -56,6 +56,12 @@ class ColocationsController extends Controller
                 'joined_at' => now(),
                 'left_at'   => null,
             ]);
+
+            // Seed default categories
+            $defaultCategories = ['Loyer', 'Courses', 'Électricité', 'Internet', 'Autres'];
+            foreach ($defaultCategories as $cat) {
+                $colocation->categories()->create(['name' => $cat]);
+            }
         });
 
         return redirect()->route('colocations.index')->with('success', 'Colocation créée avec succès !');
@@ -81,18 +87,20 @@ class ColocationsController extends Controller
             'settlements.creditor',
         ]);
 
+        $monthFilter = request('month');
+        $filteredExpenses = $colocation->expenses;
+        if ($monthFilter) {
+            $filteredExpenses = $filteredExpenses->filter(function ($expense) use ($monthFilter) {
+                return \Carbon\Carbon::parse($expense->date)->format('Y-m') === $monthFilter;
+            });
+        }
+        $filteredExpenses = $filteredExpenses->sortByDesc('date');
+
         // Calculate balances
         $activeMembers = $colocation->members()->wherePivotNull('left_at')->get();
-        $totalAmount   = $colocation->expenses()->sum('amount');
-        $share         = $activeMembers->count() > 0 ? $totalAmount / $activeMembers->count() : 0;
+        $balances = \App\Http\Controllers\SettlementsController::getBalances($colocation);
 
-        $balances = [];
-        foreach ($activeMembers as $member) {
-            $paid = $colocation->expenses()->where('payer_id', $member->id)->sum('amount');
-            $balances[$member->id] = round($paid - $share, 2);
-        }
-
-        return view('colocations.show', compact('colocation', 'balances', 'activeMembers'));
+        return view('colocations.show', compact('colocation', 'balances', 'activeMembers', 'filteredExpenses', 'monthFilter'));
     }
 
     public function leave(Colocations $colocation)
@@ -103,11 +111,9 @@ class ColocationsController extends Controller
         if ($membership && $membership->pivot->role !== 'owner') {
 
             // Reputation check before leaving
-            $memberCount  = $colocation->members()->wherePivot('left_at', null)->count();
-            $totalAmount  = $colocation->expenses()->sum('amount');
-            $share        = $memberCount > 0 ? $totalAmount / $memberCount : 0;
-            $memberPaid   = $colocation->expenses()->where('payer_id', $user->id)->sum('amount');
-            $memberBalance = round($memberPaid - $share, 2);
+            // Reputation check before leaving
+            $balances = \App\Http\Controllers\SettlementsController::getBalances($colocation);
+            $memberBalance = $balances[$user->id] ?? 0;
 
             $colocation->members()->updateExistingPivot($user->id, [
                 'left_at' => now(),

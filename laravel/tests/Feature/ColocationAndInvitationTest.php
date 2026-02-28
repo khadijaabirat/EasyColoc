@@ -154,7 +154,7 @@ class ColocationAndInvitationTest extends TestCase
 
         $memberReputationBefore = $member->reputation_score;
 
-        $response = $this->actingAs($owner)->post("/colocations/{$colocation->id}/remove-member/{$member->id}");
+        $response = $this->actingAs($owner)->delete("/colocations/{$colocation->id}/members/{$member->id}");
 
         $response->assertRedirect(route('colocations.show', $colocation));
         $response->assertSessionHas('success');

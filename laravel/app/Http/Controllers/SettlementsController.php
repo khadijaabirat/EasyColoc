@@ -55,37 +55,73 @@ class SettlementsController extends Controller
             ->with('success', 'Paiement enregistré ! Réputation mise à jour.');
     }
 
+    public static function getBalances(Colocations $colocation): array
+    {
+        $allMembers = $colocation->members()->withPivot('joined_at', 'left_at')->get();
+        $expenses = $colocation->expenses()->get();
+        
+        $balances = [];
+        foreach ($allMembers as $m) {
+            $balances[$m->id] = 0.0;
+        }
+
+        foreach ($expenses as $expense) {
+            // Find who was active at that date
+            $expenseDate = \Carbon\Carbon::parse($expense->date)->startOfDay();
+            
+            $activeAtDate = $allMembers->filter(function($m) use ($expenseDate) {
+                // If created today, date might be today. We just check date.
+                $joined = \Carbon\Carbon::parse($m->pivot->joined_at)->startOfDay();
+                $left = $m->pivot->left_at ? \Carbon\Carbon::parse($m->pivot->left_at)->startOfDay() : null;
+                
+                return $joined->lte($expenseDate) && ($left === null || $left->gte($expenseDate));
+            });
+
+            $count = $activeAtDate->count();
+            if ($count > 0) {
+                $share = $expense->amount / $count;
+                foreach ($activeAtDate as $m) {
+                    $balances[$m->id] -= $share;
+                }
+            }
+            
+            // Payer gets credited
+            if (isset($balances[$expense->payer_id])) {
+                $balances[$expense->payer_id] += $expense->amount;
+            }
+        }
+
+        // Apply already paid settlements
+        $paidSettlements = $colocation->settlements()->where('is_paid', true)->get();
+        foreach ($paidSettlements as $s) {
+            if (isset($balances[$s->debtor_id])) {
+                $balances[$s->debtor_id] += $s->amount; // Debtor paid their debt -> balance goes up towards zero
+            }
+            if (isset($balances[$s->creditor_id])) {
+                $balances[$s->creditor_id] -= $s->amount; // Creditor got paid -> balance goes down towards zero
+            }
+        }
+        
+        // Round safely to 2 decimals
+        $rounded = [];
+        foreach ($balances as $id => $val) {
+            $rounded[$id] = round($val, 2);
+        }
+        return $rounded;
+    }
+
     /**
-     * Recalculate and regenerate all settlements for a colocation.
+     * Recalculate and regenerate all UNPAID settlements for a colocation.
      * Called automatically after expense changes.
      */
     public static function recalculate(Colocations $colocation): void
     {
-        $members     = $colocation->members()->wherePivotNull('left_at')->get();
-        $memberCount = $members->count();
+        $balances = self::getBalances($colocation);
 
-        if ($memberCount < 2) {
-            return;
-        }
-
-        $totalAmount = $colocation->expenses()->sum('amount');
-        $share       = round($totalAmount / $memberCount, 2);
-
-        // Build paid map
-        $paid = [];
-        foreach ($members as $m) {
-            $paid[$m->id] = round(
-                $colocation->expenses()->where('payer_id', $m->id)->sum('amount'),
-                2
-            );
-        }
-
-        // Net balance: positive = creditor, negative = debtor
-        $balances = [];
-        foreach ($members as $m) {
-            $bal = round($paid[$m->id] - $share, 2);
-            if (abs($bal) > 0.01) {
-                $balances[$m->id] = $bal;
+        // Filter out those extremely close to 0 to avoid float precision dirt
+        foreach ($balances as $k => $v) {
+            if (abs($v) < 0.01) {
+                unset($balances[$k]);
             }
         }
 

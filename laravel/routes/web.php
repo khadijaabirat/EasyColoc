@@ -41,6 +41,7 @@ Route::middleware(['auth', 'verified', 'banned'])->group(function () {
 
     // Expenses
     Route::post('/colocations/{colocation}/expenses',               [ExpensesController::class, 'store'])->name('expenses.store');
+    Route::put('/colocations/{colocation}/expenses/{expense}',      [ExpensesController::class, 'update'])->name('expenses.update');
     Route::delete('/colocations/{colocation}/expenses/{expense}',   [ExpensesController::class, 'destroy'])->name('expenses.destroy');
 
     // Categories

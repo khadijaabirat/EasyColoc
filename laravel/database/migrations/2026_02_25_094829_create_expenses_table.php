@@ -17,7 +17,7 @@ return new class extends Migration
     $table->decimal('amount', 10, 2);
     $table->date('date');
     $table->foreignId('payer_id')->constrained('users');
-    $table->foreignId('category_id')->constrained();
+    $table->foreignId('category_id')->nullable()->constrained();
     $table->foreignId('colocation_id')->constrained();
     $table->timestamps();
         });

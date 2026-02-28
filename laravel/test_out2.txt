@@ -1,0 +1,31 @@
+
+   FAIL  Tests\Feature\ColocationAndInvitationTest
+  ✓ user can create c… 0.36s  
+  ✓ user cannot creat… 0.02s  
+  ✓ owner can send in… 0.03s  
+  ✓ user can accept i… 0.02s  
+  ✓ user cannot accep… 0.02s  
+  ✓ member can leave…  0.03s  
+  ⨯ owner can remove…  0.03s  
+  ──────────────────────────  
+   FAILED…   QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: expenses.category_id (Connection: sqlite, Database: :memory:, SQL: insert into "expenses" ("title", "amount", "date", "payer_id", "colocation_id", "updated_at", "created_at") values (Loyer, 100, 2026-02-28 00:00:00, 1, 1, 2026-02-28 15:00:47, 2026-02-28 15:00:47))
+
+  at vendor\laravel\framework\src\Illuminate\Database\Connection.php:584
+    580▕             $this->bindValues($statement, $this->prepareBindings($bindings));
+    581▕ 
+    582▕             $this->recordsHaveBeenModified();
+    583▕ 
+  ➜ 584▕             return $statement->execute();
+    585▕         });
+    586▕     }
+    587▕ 
+    588▕     /**
+
+  1   vendor\laravel\framework\src\Illuminate\Database\Connection.php:584
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:827
+
+
+  Tests:    1 failed, 6 passed (21 assertions)
+  Duration: 5.76s
+

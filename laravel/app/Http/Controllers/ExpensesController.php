@@ -64,6 +64,54 @@ class ExpensesController extends Controller
     }
 
     /**
+     * Update an existing expense.
+     * Only the payer or the owner can update it.
+     */
+    public function update(Request $request, Colocations $colocation, expenses $expense)
+    {
+        $this->authorizeMember($colocation);
+
+        if ($colocation->status !== 'active') {
+            return back()->with('error', 'Cette colocation n\'est plus active.');
+        }
+
+        $isOwner = $colocation->members()
+            ->where('user_id', Auth::id())
+            ->wherePivot('role', 'owner')
+            ->exists();
+
+        if ($expense->payer_id !== Auth::id() && !$isOwner) {
+            abort(403, 'Seul le payeur ou l\'owner peut modifier cette dépense.');
+        }
+
+        $data = $request->validate([
+            'title'       => 'required|string|max:255',
+            'amount'      => 'required|numeric|min:0.01',
+            'date'        => 'required|date',
+            'payer_id'    => 'required|exists:users,id',
+            'category_id' => 'nullable|exists:categories,id',
+        ]);
+
+        $isActiveMember = $colocation->members()
+            ->where('user_id', $data['payer_id'])
+            ->wherePivotNull('left_at')
+            ->exists();
+
+        if (!$isActiveMember) {
+            return back()->with('error', 'Le nouveau payeur sélectionné n\'est pas un membre actif.');
+        }
+
+        $expense->update($data);
+
+        // Recalculate settlements
+        SettlementsController::recalculate($colocation);
+
+        return redirect()
+            ->route('colocations.show', $colocation)
+            ->with('success', 'Dépense modifiée avec succès.');
+    }
+
+    /**
      * Delete an expense (owner only or payer).
      */
     public function destroy(Colocations $colocation, expenses $expense)
