@@ -15,6 +15,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// ── Invitations (Public) ────────────────────────────────────────────────
+Route::get('/invitations/accept/{token}', [InvitationController::class, 'accept'])->name('invitations.accept');
+
 // ── Authenticated + verified + not banned ──────────────────────────────
 Route::middleware(['auth', 'verified', 'banned'])->group(function () {
 
@@ -37,7 +40,7 @@ Route::middleware(['auth', 'verified', 'banned'])->group(function () {
 
     // Invitations
     Route::post('/colocations/{colocation}/invite', [InvitationController::class, 'store'])->name('invitations.store');
-    Route::get('/invitations/accept/{token}',       [InvitationController::class, 'accept'])->name('invitations.accept');
+    Route::post('/invitations/join',                [InvitationController::class, 'joinManual'])->name('invitations.join');
 
     // Expenses
     Route::post('/colocations/{colocation}/expenses',               [ExpensesController::class, 'store'])->name('expenses.store');

@@ -27,17 +27,66 @@ class InvitationController extends Controller
             'status' => 'pending'
         ]);
 Mail::to($request->email)->send(new InvitationMail($colocation, $token));
-        return back()->with('success', 'Invitation envoyée avec succès !');
+        return back()->with('success', 'Invitation envoyée avec succès !')->with('generated_token', $token);
     }
 
 
     public function accept($token)
     {
         $invitation = Invitation::where('token', $token)->where('status', 'pending')->firstOrFail();
-        $user = auth()->user();
+
+        // If a user is logged in, but their email does not match the invitation email
+        if (Auth::check() && Auth::user()->email !== $invitation->email) {
+            Auth::logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+        }
+
+        // If no one is logged in (either initially, or after logging out the wrong user)
+        if (!Auth::check()) {
+            session(['url.intended' => route('invitations.accept', $token)]);
+
+            $userExists = \App\Models\User::where('email', $invitation->email)->exists();
+            if ($userExists) {
+                return redirect()->route('login')->with('info', "Veuillez vous connecter avec l'email pour accepter l'invitation.");
+            } else {
+                return redirect()->route('register')->with('info', "Veuillez créer un compte avec l'email pour accepter l'invitation.");
+            }
+        }
+
+        // At this point, the user is logged in and their email matches
+        $user = Auth::user();
 
         if ($user->colocations()->wherePivotNull('left_at')->exists()) {
             return redirect()->route('dashboard')->with('error', 'Vous avez déjà une colocation active.');
+        }
+
+        $invitation->colocation->members()->attach($user->id, [
+            'role' => 'member',
+            'joined_at' => now(),
+            'left_at' => null,
+        ]);
+
+        $invitation->update(['status' => 'accepted']);
+
+        return redirect()->route('colocations.show', $invitation->colocation_id)
+                         ->with('success', 'Bienvenue dans la colocation !');
+    }
+
+    public function joinManual(Request $request)
+    {
+        $request->validate(['token' => 'required|string']);
+        $token = $request->token;
+        
+        $invitation = Invitation::where('token', $token)->where('status', 'pending')->first();
+        if (!$invitation) {
+            return back()->with('error', 'Token invalide ou invitation expirée.');
+        }
+
+        $user = auth()->user();
+
+        if ($user->colocations()->wherePivotNull('left_at')->exists()) {
+            return back()->with('error', 'Vous avez déjà une colocation active.');
         }
 
         $invitation->colocation->members()->attach($user->id, [

@@ -229,6 +229,20 @@
                     <div class="section-title">
                         <i class="fas fa-envelope text-emerald-500"></i> Inviter un membre
                     </div>
+                    
+                    @if(session('generated_token'))
+                        <div style="margin-bottom:1.5rem; padding:1.25rem; background:#ecfdf5; border:1.5px dashed #10b981; border-radius:12px; color:#065f46;">
+                            <p style="font-size:0.875rem; font-weight:700; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;">
+                                <i class="fas fa-key"></i> Code d'invitation
+                            </p>
+                            <div style="padding:0.75rem; background:#ffffff; border-radius:8px; border:1px solid #a7f3d0; font-family:monospace; font-size:1rem; font-weight:bold; letter-spacing:0.05em; word-break:break-all; text-align:center; color:#047857; box-shadow:0 2px 4px rgba(16, 185, 129, 0.1);">
+                                {{ session('generated_token') }}
+                            </div>
+                            <p style="font-size:0.8rem; margin-top:0.75rem; opacity:0.9; line-height:1.4;">
+                                Vous pouvez simplement partager ce code avec le futur colocataire. Il pourra le coller sur son tableau de bord pour vous rejoindre.
+                            </p>
+                        </div>
+                    @endif
                     <form action="{{ route('invitations.store', $colocation) }}" method="POST">
                         @csrf
                         <div style="margin-bottom:1rem;">

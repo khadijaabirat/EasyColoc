@@ -17,8 +17,8 @@
     @if(!$activeColoc)
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-bottom:2rem;">
 
-            <!-- CTA Card -->
-            <div style="grid-column:1/-1; background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);
+            <!-- Create CTA Card -->
+            <div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);
                         border-radius:20px; padding:3rem; color:white; position:relative; overflow:hidden;">
                 <div style="position:absolute; top:-60px; right:-60px; width:250px; height:250px;
                              border-radius:50%; background:rgba(255,255,255,0.08);"></div>
@@ -26,11 +26,11 @@
                     <span style="background:rgba(255,255,255,0.2); padding:0.35rem 0.9rem; border-radius:9999px; font-size:0.78rem; font-weight:600; letter-spacing:0.05em;">
                         AUCUNE COLOCATION ACTIVE
                     </span>
-                    <h2 style="font-family:'Outfit',sans-serif; font-size:2rem; font-weight:700; margin:1rem 0 0.75rem;">
-                        Commencez votre aventure en colocation !
+                    <h2 style="font-family:'Outfit',sans-serif; font-size:1.8rem; font-weight:700; margin:1rem 0 0.75rem;">
+                        Nouvelle colocation
                     </h2>
                     <p style="opacity:0.85; margin-bottom:2rem; line-height:1.7;">
-                        Créez une colocation et invitez vos colocataires, ou attendez une invitation par e-mail pour rejoindre un logement existant.
+                        Créez une colocation et invitez vos colocataires à vous rejoindre.
                     </p>
                     <a href="{{ route('colocations.create') }}"
                        style="display:inline-flex; align-items:center; gap:0.5rem; background:white; color:#4f46e5;
@@ -39,6 +39,31 @@
                         <i class="fas fa-plus-circle"></i> Créer ma Colocation
                     </a>
                 </div>
+            </div>
+
+            <!-- Join CTA Card -->
+            <div style="background:white; border:2px solid #e2e8f0;
+                        border-radius:20px; padding:3rem; color:#1e293b; position:relative;">
+                <span style="background:#f1f5f9; color:#64748b; padding:0.35rem 0.9rem; border-radius:9999px; font-size:0.78rem; font-weight:600; letter-spacing:0.05em;">
+                    CODE D'INVITATION
+                </span>
+                <h2 style="font-family:'Outfit',sans-serif; font-size:1.8rem; font-weight:700; margin:1rem 0 0.75rem;">
+                    Rejoindre une colocation
+                </h2>
+                <p style="color:#64748b; margin-bottom:1.5rem; line-height:1.7;">
+                    Vous avez reçu un code ou un token d'invitation ? Entrez-le ci-dessous.
+                </p>
+                <form action="{{ route('invitations.join') }}" method="POST" style="display:flex; flex-direction:column; gap:1rem;">
+                    @csrf
+                    <input type="text" name="token" required placeholder="Ex: a1b2c3d4e5..." 
+                           style="padding:0.875rem 1rem; border:1.5px solid #e2e8f0; border-radius:12px; font-size:1rem; outline:none; box-sizing:border-box;"
+                           onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#e2e8f0'">
+                    <button type="submit" 
+                            style="padding:0.875rem 1.75rem; background:#10b981; color:white; border:none; border-radius:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem;"
+                            onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                        <i class="fas fa-sign-in-alt"></i> Rejoindre la colocation
+                    </button>
+                </form>
             </div>
         </div>
 
