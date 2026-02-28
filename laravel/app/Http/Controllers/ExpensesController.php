@@ -53,6 +53,15 @@ class ExpensesController extends Controller
             return back()->with('error', 'Le payeur sélectionné n\'est pas un membre actif.');
         }
 
+        $isOwner = $colocation->members()
+            ->where('user_id', Auth::id())
+            ->wherePivot('role', 'owner')
+            ->exists();
+
+        if (!$isOwner && $data['payer_id'] != Auth::id()) {
+            abort(403, 'Seul le propriétaire peut attribuer une dépense à un autre membre.');
+        }
+
         $colocation->expenses()->create($data);
 
         // Recalculate who owes whom
@@ -99,6 +108,10 @@ class ExpensesController extends Controller
 
         if (!$isActiveMember) {
             return back()->with('error', 'Le nouveau payeur sélectionné n\'est pas un membre actif.');
+        }
+
+        if (!$isOwner && $data['payer_id'] != Auth::id()) {
+            abort(403, 'Seul le propriétaire peut attribuer une dépense à un autre membre.');
         }
 
         $expense->update($data);

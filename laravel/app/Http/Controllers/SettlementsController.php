@@ -35,8 +35,13 @@ class SettlementsController extends Controller
             abort(403);
         }
 
-        if ($settlement->debtor_id !== Auth::id()) {
-            abort(403, 'Seul le débiteur peut marquer ce paiement comme effectué.');
+        $isOwner = $colocation->members()
+            ->where('user_id', Auth::id())
+            ->wherePivot('role', 'owner')
+            ->exists();
+
+        if ($settlement->debtor_id !== Auth::id() && !$isOwner) {
+            abort(403, 'Seul le débiteur ou le propriétaire peut marquer ce paiement comme effectué.');
         }
 
         if ($settlement->is_paid) {

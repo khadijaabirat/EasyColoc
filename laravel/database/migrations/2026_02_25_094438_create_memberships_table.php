@@ -20,8 +20,7 @@ return new class extends Migration
      $table->timestamp('left_at')->nullable();
      $table->timestamp('joined_at')->nullable();
       $table->timestamps();
-      $table->unique(['user_id', 'colocation_id']);
-        });
+         });
     }
 
     /**

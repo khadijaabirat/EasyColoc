@@ -293,13 +293,15 @@
                                     <span style="font-weight:600;color:#10b981;">{{ $dbS->creditor->name }}</span>
                                     <span style="font-weight:700;color:#92400e;margin-left:0.75rem;">{{ number_format($dbS->amount,2) }} €</span>
                                 </div>
-                                @if($dbS->debtor_id === auth()->id())
+                                @if($dbS->debtor_id === auth()->id() || $isOwner)
                                     <form action="{{ route('settlements.pay', [$colocation, $dbS]) }}" method="POST">
                                         @csrf
                                         <button type="submit"
-                                                style="background:#4f46e5;color:white;border:none;padding:0.4rem 0.9rem;
+                                                style="background:{{ $isOwner && $dbS->debtor_id !== auth()->id() ? '#f59e0b' : '#4f46e5' }};color:white;border:none;padding:0.4rem 0.9rem;
                                                        border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;"
-                                                onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
+                                                onmouseover="this.style.background='{{ $isOwner && $dbS->debtor_id !== auth()->id() ? '#d97706' : '#4338ca' }}'" 
+                                                onmouseout="this.style.background='{{ $isOwner && $dbS->debtor_id !== auth()->id() ? '#f59e0b' : '#4f46e5' }}'"
+                                                title="{{ $isOwner && $dbS->debtor_id !== auth()->id() ? 'En tant que propriétaire, vous pouvez marquer ceci comme payé.' : '' }}">
                                             <i class="fas fa-check mr-1"></i>Marquer payé
                                         </button>
                                     </form>
@@ -441,12 +443,20 @@
                     </div>
                     <div style="margin-bottom:1.25rem;">
                         <label style="display:block;font-size:0.83rem;font-weight:600;color:#374151;margin-bottom:0.4rem;">Payeur</label>
-                        <select name="payer_id" required
-                                style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;color:#1e293b;background:white;">
-                            @foreach($activeMembers as $m)
-                                <option value="{{ $m->id }}" {{ $m->id === auth()->id() ? 'selected' : '' }}>{{ $m->name }}</option>
-                            @endforeach
-                        </select>
+                        @if($isOwner)
+                            <select name="payer_id" required
+                                    style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;color:#1e293b;background:white;">
+                                @foreach($activeMembers as $m)
+                                    <option value="{{ $m->id }}" {{ $m->id === auth()->id() ? 'selected' : '' }}>{{ $m->name }}</option>
+                                @endforeach
+                            </select>
+                        @else
+                            <select disabled
+                                    style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;color:#64748b;background:#f1f5f9;cursor:not-allowed;">
+                                <option value="{{ auth()->id() }}" selected>{{ auth()->user()->name }} (Vous)</option>
+                            </select>
+                            <input type="hidden" name="payer_id" value="{{ auth()->id() }}">
+                        @endif
                     </div>
                     <div style="margin-bottom:1.75rem;">
                         <label style="display:block;font-size:0.83rem;font-weight:600;color:#374151;margin-bottom:0.4rem;">Catégorie</label>
@@ -515,12 +525,20 @@
                     </div>
                     <div style="margin-bottom:1.25rem;">
                         <label style="display:block;font-size:0.83rem;font-weight:600;color:#374151;margin-bottom:0.4rem;">Payeur</label>
-                        <select name="payer_id" id="edit-payer" required
-                                style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;color:#1e293b;background:white;">
-                            @foreach($activeMembers as $m)
-                                <option value="{{ $m->id }}">{{ $m->name }}</option>
-                            @endforeach
-                        </select>
+                        @if($isOwner)
+                            <select name="payer_id" id="edit-payer" required
+                                    style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;color:#1e293b;background:white;">
+                                @foreach($activeMembers as $m)
+                                    <option value="{{ $m->id }}">{{ $m->name }}</option>
+                                @endforeach
+                            </select>
+                        @else
+                            <select id="edit-payer-disabled" disabled
+                                    style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;color:#64748b;background:#f1f5f9;cursor:not-allowed;">
+                                <option value="{{ auth()->id() }}" selected>{{ auth()->user()->name }} (Vous)</option>
+                            </select>
+                            <input type="hidden" name="payer_id" id="edit-payer" value="{{ auth()->id() }}">
+                        @endif
                     </div>
                     <div style="margin-bottom:1.75rem;">
                         <label style="display:block;font-size:0.83rem;font-weight:600;color:#374151;margin-bottom:0.4rem;">Catégorie</label>
