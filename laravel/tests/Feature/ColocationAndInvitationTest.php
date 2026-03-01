@@ -166,10 +166,9 @@ class ColocationAndInvitationTest extends TestCase
         $member->refresh();
         $this->assertEquals($memberReputationBefore - 1, $member->reputation_score);
 
-        // Verify owner inherited the debt via a corrective synthetic expense
-        $syntheticExpense = clone $colocation->expenses()->where('title', "LIKE", "%Reprise de dette%")->first();
-        $this->assertNotNull($syntheticExpense);
-        $this->assertEquals(50, $syntheticExpense->amount);
-        $this->assertEquals($owner->id, $syntheticExpense->payer_id);
+        // Verify owner inherited the debt via calculation rather than synthetic expense
+        $balances = \App\Http\Controllers\SettlementsController::getBalances($colocation);
+        $this->assertEquals(0, $balances[$member->id] ?? 0);
+        $this->assertEquals(0, $balances[$owner->id] ?? 0);
     }
 }

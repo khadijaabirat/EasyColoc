@@ -64,13 +64,6 @@ class SettlementAndReputationTest extends TestCase
         
         $settlement->refresh();
         $this->assertTrue((bool)$settlement->is_paid);
-        
-        // Check reputations
-        $owner->refresh();
-        $member->refresh();
-        
-        $this->assertEquals(1, $owner->reputation_score); // creditor +1
-        $this->assertEquals(1, $member->reputation_score); // debtor +1
     }
 
     public function test_member_leave_with_debt_decreases_reputation()

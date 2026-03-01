@@ -50,10 +50,8 @@ class SettlementsController extends Controller
 
         $settlement->update(['is_paid' => true]);
 
-        // Update reputation: creditor +1
-        $settlement->creditor->increment('reputation_score');
-        // Also +1 for honest debtor
-        Auth::user()->increment('reputation_score');
+        // Recalculate remaining UNPAID debts dynamically based on the newly paid offset
+        self::recalculate($colocation);
 
         return redirect()
             ->route('colocations.show', $colocation)
@@ -62,7 +60,7 @@ class SettlementsController extends Controller
 
     public static function getBalances(Colocations $colocation): array
     {
-        $allMembers = $colocation->members()->withPivot('joined_at', 'left_at')->get();
+        $allMembers = $colocation->members()->withPivot('joined_at', 'left_at', 'active', 'role')->get();
         $expenses = $colocation->expenses()->get();
         
         $balances = [];
@@ -119,6 +117,20 @@ class SettlementsController extends Controller
             }
         }
         
+        // --- DEBT TRANSFER FOR KICKED MEMBERS ---
+        $kickedMembers = $allMembers->filter(function($m) {
+            return $m->pivot->active == false;
+        });
+        $owner = $allMembers->firstWhere('pivot.role', 'owner');
+        if ($owner) {
+            foreach ($kickedMembers as $km) {
+                if (isset($balances[$km->id])) {
+                    $balances[$owner->id] += $balances[$km->id];
+                    $balances[$km->id] = 0.0;
+                }
+            }
+        }
+
         // Round safely to 2 decimals
         $rounded = [];
         foreach ($balances as $id => $val) {
@@ -134,7 +146,7 @@ class SettlementsController extends Controller
      */
     public static function recalculate(Colocations $colocation): void
     {
-        $allMembers = $colocation->members()->withPivot('joined_at', 'left_at')->get();
+        $allMembers = $colocation->members()->withPivot('joined_at', 'left_at', 'active', 'role')->get();
         $expenses = $colocation->expenses()->get();
 
         // matrix[debtor_id][creditor_id] = total_raw_amount_owed
@@ -184,6 +196,41 @@ class SettlementsController extends Controller
                 // If they overpaid or paid a debt that no longer exists (due to expense deletion)
                 // we cap it at zero below either way, but we can set it so it's tracked
                 $matrix[$s->debtor_id][$s->creditor_id] = -$s->amount;
+            }
+        }
+
+        // --- DEBT TRANSFER FOR KICKED MEMBERS ---
+        $kickedMembers = $allMembers->filter(function($m) {
+            return $m->pivot->active == false;
+        });
+
+        $owner = $allMembers->firstWhere('pivot.role', 'owner');
+
+        if ($owner) {
+            foreach ($kickedMembers as $km) {
+                // Transfer kick member's debts completely to the owner
+                if (isset($matrix[$km->id])) {
+                    foreach ($matrix[$km->id] as $creditor => $amount) {
+                        if ($amount > 0.01) {
+                            if (!isset($matrix[$owner->id][$creditor])) {
+                                $matrix[$owner->id][$creditor] = 0.0;
+                            }
+                            $matrix[$owner->id][$creditor] += $amount;
+                            $matrix[$km->id][$creditor] = 0.0;
+                        }
+                    }
+                }
+
+                // Transfer kicked member's credits to the owner
+                foreach ($matrix as $debtor => &$creditors) {
+                    if (isset($creditors[$km->id]) && $creditors[$km->id] > 0.01) {
+                        if (!isset($creditors[$owner->id])) {
+                            $creditors[$owner->id] = 0.0;
+                        }
+                        $creditors[$owner->id] += $creditors[$km->id];
+                        $creditors[$km->id] = 0.0;
+                    }
+                }
             }
         }
 
