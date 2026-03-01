@@ -18,7 +18,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Main admin dashboard with global statistics.
+     *admin dashboard
      */
     public function index()
     {
@@ -54,7 +54,10 @@ class AdminController extends Controller
             return back()->with('error', 'Vous ne pouvez pas bannir un autre administrateur.');
         }
 
-        $user->update(['is_banned' => true]);
+        $user->update([
+            'is_banned' => true,
+            'banned_at' => now(),
+        ]);
 
         return back()->with('success', $user->name . ' a été banni(e).');
     }
@@ -66,7 +69,10 @@ class AdminController extends Controller
     {
         $this->authorizeAdmin();
 
-        $user->update(['is_banned' => false]);
+        $user->update([
+            'is_banned' => false,
+            'banned_at' => null,
+        ]);
 
         return back()->with('success', $user->name . ' a été débanni(e).');
     }

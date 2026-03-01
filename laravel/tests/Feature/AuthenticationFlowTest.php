@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+uses(RefreshDatabase::class);
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 

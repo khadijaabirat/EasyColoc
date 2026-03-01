@@ -56,6 +56,7 @@ Route::middleware(['auth', 'verified', 'banned'])->group(function () {
 
     // Memberships
     Route::delete('/colocations/{colocation}/members/{user}', [MembershipsController::class, 'removeMember'])->name('memberships.remove');
+    Route::post('/colocations/{colocation}/members/{user}/transfer', [MembershipsController::class, 'transferOwnership'])->name('memberships.transfer');
 
     // Admin (global admin only — checked inside the controller)
     Route::prefix('admin')->name('admin.')->group(function () {

@@ -88,12 +88,11 @@
     {{-- DASHBOARD: Has active colocation --}}
     @else
         @php
-            $totalMembers  = $activeColoc->members()->wherePivotNull('left_at')->count();
+            $totalMembers  = $activeColoc->members()->wherePivotNull('left_at')->where('is_banned', false)->count();
             $totalExpenses = $activeColoc->expenses()->count();
             $totalAmount   = $activeColoc->expenses()->sum('amount');
-            $myShare       = $totalMembers > 0 ? $totalAmount / $totalMembers : 0;
-            $iPaid         = $activeColoc->expenses()->where('payer_id', auth()->id())->sum('amount');
-            $myBalance     = $iPaid - $myShare;
+            $balances      = \App\Http\Controllers\SettlementsController::getBalances($activeColoc);
+            $myBalance     = $balances[auth()->id()] ?? 0;
             $isOwner       = $activeColoc->members()->where('user_id', auth()->id())->wherePivot('role','owner')->exists();
         @endphp
 
@@ -211,6 +210,40 @@
                                     <i class="fas fa-user text-indigo-400 mr-1"></i>Membre
                                 @endif
                             </p>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    {{-- History of Colocations --}}
+    @if(isset($pastColocs) && $pastColocs->isNotEmpty())
+        <div class="glass-card" style="padding:1.75rem; margin-top:2rem;">
+            <div class="section-title">
+                <i class="fas fa-history text-indigo-500"></i> Historique de mes colocations
+            </div>
+            <div style="display:flex; flex-direction:column; gap:1rem;">
+                @foreach($pastColocs as $coloc)
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:1.25rem 1.5rem; border-radius:12px; border:1px solid #e2e8f0; flex-wrap:wrap; gap:1rem;">
+                        <div>
+                            <h4 style="font-weight:700; color:#1e293b; margin-bottom:0.25rem; font-size:1.1rem;">{{ $coloc->name }}</h4>
+                            <p style="font-size:0.875rem; color:#64748b;">
+                                Rejointe le {{ \Carbon\Carbon::parse($coloc->pivot->joined_at)->format('d/m/Y') }} 
+                                <span style="margin:0 0.5rem;">•</span> 
+                                Quittée le {{ \Carbon\Carbon::parse($coloc->pivot->left_at)->format('d/m/Y') }}
+                            </p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:1rem;">
+                            <span style="background:{{ $coloc->status === 'cancelled' ? '#fee2e2' : '#e0e7ff' }}; color:{{ $coloc->status === 'cancelled' ? '#ef4444' : '#4f46e5' }}; padding:0.35rem 0.8rem; border-radius:9999px; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase;">
+                                {{ $coloc->status === 'cancelled' ? 'Annulée' : 'Quittée' }}
+                            </span>
+                            <a href="{{ route('colocations.show', $coloc) }}" 
+                               style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; background:white; color:#64748b; border:1.5px solid #e2e8f0; border-radius:50%; transition:all 0.2s; text-decoration:none;"
+                               onmouseover="this.style.color='#4f46e5'; this.style.borderColor='#c7d2fe';" onmouseout="this.style.color='#64748b'; this.style.borderColor='#e2e8f0';"
+                               title="Voir l'historique">
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
                         </div>
                     </div>
                 @endforeach

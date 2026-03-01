@@ -82,4 +82,58 @@ class MembershipsController extends Controller
             ->route('colocations.show', $colocation)
             ->with('success', $user->name . ' a été retiré(e) de la colocation.');
     }
+
+    /**
+     * Owner transfers ownership to another active member.
+     */
+    public function transferOwnership(Colocations $colocation, User $user)
+    {
+        $currentUserId = Auth::id();
+
+        // 1. Check if the current user is actually the owner
+        $isOwner = $colocation->members()
+            ->where('user_id', $currentUserId)
+            ->wherePivot('role', 'owner')
+            ->exists();
+
+        if (!$isOwner) {
+            abort(403, 'Seul le propriétaire peut transférer ses droits.');
+        }
+
+        // 2. Cannot transfer to oneself
+        if ($currentUserId === $user->id) {
+            return back()->with('error', 'Vous êtes déjà le propriétaire.');
+        }
+
+        // 3. Ensure the target user is an ACTIVE member of this colocation
+        $targetIsActiveMember = $colocation->members()
+            ->where('user_id', $user->id)
+            ->wherePivotNull('left_at')
+            ->exists();
+
+        if (!$targetIsActiveMember) {
+            return back()->with('error', 'Le membre sélectionné n\'est pas actif dans cette colocation.');
+        }
+
+        DB::transaction(function () use ($colocation, $user, $currentUserId) {
+            // Downgrade current owner to member
+            $colocation->members()->updateExistingPivot($currentUserId, [
+                'role' => 'member',
+            ]);
+
+            // Upgrade target member to owner
+            $colocation->members()->updateExistingPivot($user->id, [
+                'role' => 'owner',
+            ]);
+
+            // Update the colocation's owner_id
+            $colocation->update([
+                'owner_id' => $user->id,
+            ]);
+        });
+
+        return redirect()
+            ->route('colocations.show', $colocation)
+            ->with('success', 'Les droits de propriétaire ont été transférés à ' . $user->name . '.');
+    }
 }

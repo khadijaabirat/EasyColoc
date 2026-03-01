@@ -20,6 +20,7 @@ return new class extends Migration
             $table->rememberToken();
             $table->enum('role', ['admin','owner', 'member'])->default('member');
             $table->boolean('is_banned')->default(false);
+            $table->timestamp('banned_at')->nullable();
             $table->integer('reputation_score')->default(0);
             $table->timestamps();
         });

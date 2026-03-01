@@ -22,7 +22,7 @@ class CategoriesController extends Controller
     }
 
     /**
-     * Store a new category for the colocation.
+     *  new category
      */
     public function store(Request $request, Colocations $colocation)
     {
@@ -32,8 +32,7 @@ class CategoriesController extends Controller
             'name' => 'required|string|max:100',
         ]);
 
-        // Prevent duplicates within the same colocation
-        $exists = $colocation->categories()
+         $exists = $colocation->categories()
             ->where('name', $request->name)
             ->exists();
 
@@ -47,7 +46,7 @@ class CategoriesController extends Controller
     }
 
     /**
-     * Delete a category (owner only, cannot delete if expenses use it).
+     * Delete a category  
      */
     public function destroy(Colocations $colocation, categories $category)
     {

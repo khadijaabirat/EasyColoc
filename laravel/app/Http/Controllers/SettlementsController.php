@@ -79,7 +79,19 @@ class SettlementsController extends Controller
                 $joined = \Carbon\Carbon::parse($m->pivot->joined_at)->startOfDay();
                 $left = $m->pivot->left_at ? \Carbon\Carbon::parse($m->pivot->left_at)->startOfDay() : null;
                 
-                return $joined->lte($expenseDate) && ($left === null || $left->gte($expenseDate));
+                // Active if joined before/on expense date and hasn't left before expense date
+                $isActive = $joined->lte($expenseDate) && ($left === null || $left->gte($expenseDate));
+
+                // If they are banned, check if they were banned ON or BEFORE the expense date
+                $wasBannedThen = false;
+                if ($m->is_banned && $m->banned_at) {
+                    $banned = \Carbon\Carbon::parse($m->banned_at)->startOfDay();
+                    if ($banned->lte($expenseDate)) {
+                        $wasBannedThen = true;
+                    }
+                }
+                
+                return $isActive && !$wasBannedThen;
             });
 
             $count = $activeAtDate->count();
@@ -118,49 +130,81 @@ class SettlementsController extends Controller
     /**
      * Recalculate and regenerate all UNPAID settlements for a colocation.
      * Called automatically after expense changes.
+     * Computes raw pairwise debts without applying advanced simplification.
      */
     public static function recalculate(Colocations $colocation): void
     {
-        $balances = self::getBalances($colocation);
+        $allMembers = $colocation->members()->withPivot('joined_at', 'left_at')->get();
+        $expenses = $colocation->expenses()->get();
 
-        // Filter out those extremely close to 0 to avoid float precision dirt
-        foreach ($balances as $k => $v) {
-            if (abs($v) < 0.01) {
-                unset($balances[$k]);
+        // matrix[debtor_id][creditor_id] = total_raw_amount_owed
+        $matrix = [];
+
+        foreach ($expenses as $expense) {
+            $expenseDate = \Carbon\Carbon::parse($expense->date)->startOfDay();
+
+            $activeAtDate = $allMembers->filter(function($m) use ($expenseDate) {
+                $joined = \Carbon\Carbon::parse($m->pivot->joined_at)->startOfDay();
+                $left = $m->pivot->left_at ? \Carbon\Carbon::parse($m->pivot->left_at)->startOfDay() : null;
+                
+                $isActive = $joined->lte($expenseDate) && ($left === null || $left->gte($expenseDate));
+
+                $wasBannedThen = false;
+                if ($m->is_banned && $m->banned_at) {
+                    $banned = \Carbon\Carbon::parse($m->banned_at)->startOfDay();
+                    if ($banned->lte($expenseDate)) {
+                        $wasBannedThen = true;
+                    }
+                }
+                
+                return $isActive && !$wasBannedThen;
+            });
+
+            $count = $activeAtDate->count();
+            if ($count > 0) {
+                $share = $expense->amount / $count;
+                foreach ($activeAtDate as $m) {
+                    // Payer does not owe themselves
+                    if ($m->id !== $expense->payer_id) {
+                        if (!isset($matrix[$m->id][$expense->payer_id])) {
+                            $matrix[$m->id][$expense->payer_id] = 0.0;
+                        }
+                        $matrix[$m->id][$expense->payer_id] += $share;
+                    }
+                }
             }
         }
 
-        // Delete un-paid settlements and regenerate
-        DB::transaction(function () use ($colocation, $balances) {
+        // Deduct settlements that have already been paid manually
+        $paidSettlements = $colocation->settlements()->where('is_paid', true)->get();
+        foreach ($paidSettlements as $s) {
+            if (isset($matrix[$s->debtor_id][$s->creditor_id])) {
+                $matrix[$s->debtor_id][$s->creditor_id] -= $s->amount;
+            } else {
+                // If they overpaid or paid a debt that no longer exists (due to expense deletion)
+                // we cap it at zero below either way, but we can set it so it's tracked
+                $matrix[$s->debtor_id][$s->creditor_id] = -$s->amount;
+            }
+        }
+
+        // Delete un-paid settlements and regenerate based on exact pairs
+        DB::transaction(function () use ($colocation, $matrix) {
             $colocation->settlements()->where('is_paid', false)->delete();
 
-            $debtors   = array_filter($balances, fn($b) => $b < 0);
-            $creditors = array_filter($balances, fn($b) => $b > 0);
-
-            asort($debtors);   // most negative first
-            arsort($creditors); // most positive first
-
-            $di = array_keys($debtors);
-            $ci = array_keys($creditors);
-            $dv = array_values($debtors);
-            $cv = array_values($creditors);
-
-            $i = $j = 0;
-            while ($i < count($dv) && $j < count($cv)) {
-                $amt = round(min(abs($dv[$i]), $cv[$j]), 2);
-                if ($amt > 0.01) {
-                    settlements::create([
-                        'colocation_id' => $colocation->id,
-                        'debtor_id'     => $di[$i],
-                        'creditor_id'   => $ci[$j],
-                        'amount'        => $amt,
-                        'is_paid'       => false,
-                    ]);
+            foreach ($matrix as $debtor => $creditors) {
+                foreach ($creditors as $creditor => $amount) {
+                    $amt = round($amount, 2);
+                    // Only generate a settlement if the raw remainder is significant (> 0.01)
+                    if ($amt > 0.01) {
+                        settlements::create([
+                            'colocation_id' => $colocation->id,
+                            'debtor_id'     => $debtor,
+                            'creditor_id'   => $creditor,
+                            'amount'        => $amt,
+                            'is_paid'       => false,
+                        ]);
+                    }
                 }
-                $dv[$i] += $amt;
-                $cv[$j] -= $amt;
-                if (abs($dv[$i]) < 0.01) $i++;
-                if (abs($cv[$j]) < 0.01) $j++;
             }
         });
     }

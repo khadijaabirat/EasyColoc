@@ -107,17 +107,33 @@
                                     <p style="font-size:0.75rem;color:#94a3b8;">solde</p>
                                 </div>
                                 @if($isOwner && $colocation->status === 'active' && $member->pivot->role !== 'owner')
-                                    <form action="{{ route('memberships.remove', [$colocation, $member]) }}" method="POST"
-                                          onsubmit="return confirm('Retirer {{ $member->name }} de la colocation ?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit"
-                                                style="background:#fef2f2;border:1px solid #fecaca;color:#ef4444;
-                                                       padding:0.4rem 0.75rem;border-radius:8px;cursor:pointer;
-                                                       font-size:0.78rem;font-weight:600;transition:all 0.2s;"
-                                                title="Retirer ce membre">
-                                            <i class="fas fa-user-minus"></i>
-                                        </button>
-                                    </form>
+                                    <div style="display:flex;gap:0.5rem;align-items:center;">
+                                        <form action="{{ route('memberships.transfer', [$colocation, $member]) }}" method="POST"
+                                              onsubmit="return confirm('Attention ! Êtes-vous sûr de vouloir céder vos droits de propriétaire à {{ $member->name }} ? Vous deviendrez un membre normal.')">
+                                            @csrf
+                                            <button type="submit"
+                                                    style="background:#fef3c7;border:1px solid #fde68a;color:#d97706;
+                                                           padding:0.4rem 0.75rem;border-radius:8px;cursor:pointer;
+                                                           font-size:0.78rem;font-weight:600;transition:all 0.2s;"
+                                                    title="Rendre Propriétaire"
+                                                    onmouseover="this.style.background='#fde68a'" onmouseout="this.style.background='#fef3c7'">
+                                                <i class="fas fa-crown"></i>
+                                            </button>
+                                        </form>
+
+                                        <form action="{{ route('memberships.remove', [$colocation, $member]) }}" method="POST"
+                                              onsubmit="return confirm('Retirer {{ $member->name }} de la colocation ?')">
+                                            @csrf @method('DELETE')
+                                            <button type="submit"
+                                                    style="background:#fef2f2;border:1px solid #fecaca;color:#ef4444;
+                                                           padding:0.4rem 0.75rem;border-radius:8px;cursor:pointer;
+                                                           font-size:0.78rem;font-weight:600;transition:all 0.2s;"
+                                                    title="Retirer ce membre"
+                                                    onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='#fef2f2'">
+                                                <i class="fas fa-user-minus"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 @endif
                             </div>
                         </div>
@@ -181,7 +197,7 @@
                                         @endif
                                     </td>
                                     <td style="color:#64748b;">
-                                        @php $payer = $activeMembers->firstWhere('id', $expense->payer_id); @endphp
+                                        @php $payer = $allMembers->firstWhere('id', $expense->payer_id); @endphp
                                         <div style="display:flex;align-items:center;gap:0.5rem;">
                                             <img src="https://ui-avatars.com/api/?name={{ urlencode($payer?->name ?? '?') }}&background=6366f1&color=fff&size=24"
                                                  style="width:24px;height:24px;border-radius:50%;" alt="">
@@ -446,7 +462,7 @@
                         @if($isOwner)
                             <select name="payer_id" required
                                     style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;color:#1e293b;background:white;">
-                                @foreach($activeMembers as $m)
+                                @foreach($activeMembers->where('is_banned', false) as $m)
                                     <option value="{{ $m->id }}" {{ $m->id === auth()->id() ? 'selected' : '' }}>{{ $m->name }}</option>
                                 @endforeach
                             </select>
@@ -528,7 +544,7 @@
                         @if($isOwner)
                             <select name="payer_id" id="edit-payer" required
                                     style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;color:#1e293b;background:white;">
-                                @foreach($activeMembers as $m)
+                                @foreach($activeMembers->where('is_banned', false) as $m)
                                     <option value="{{ $m->id }}">{{ $m->name }}</option>
                                 @endforeach
                             </select>

@@ -16,10 +16,12 @@ class ColocationsController extends Controller
         /** @var User $user */
         $user = Auth::user();
         $activeColoc = $user->colocations()->wherePivotNull('left_at')->first();
+        $pastColocs  = $user->colocations()->whereNotNull('left_at')->get();
+
         if ($activeColoc) {
-            return view('dashboard', compact('activeColoc'));
+            return view('dashboard', compact('activeColoc', 'pastColocs'));
         }
-        return view('dashboard');
+        return view('dashboard', compact('pastColocs'));
     }
 
     public function create()
@@ -97,15 +99,16 @@ class ColocationsController extends Controller
         $filteredExpenses = $filteredExpenses->sortByDesc('date');
 
         // Calculate balances
+        $allMembers = $colocation->members()->get();
         $activeMembers = $colocation->members()->wherePivotNull('left_at')->get();
         $balances = \App\Http\Controllers\SettlementsController::getBalances($colocation);
 
-        return view('colocations.show', compact('colocation', 'balances', 'activeMembers', 'filteredExpenses', 'monthFilter'));
+        return view('colocations.show', compact('colocation', 'balances', 'activeMembers', 'allMembers', 'filteredExpenses', 'monthFilter'));
     }
 
     public function leave(Colocations $colocation)
     {
-        $user       = auth()->user();
+        $user = auth()->user();
         $membership = $colocation->members()->where('user_id', $user->id)->first();
 
         if ($membership && $membership->pivot->role !== 'owner') {
@@ -118,9 +121,11 @@ class ColocationsController extends Controller
                 'left_at' => now(),
             ]);
 
-            // Reputation: Only deduct if they owe money
+            // Reputation: Deduct if they owe money, Add if they don't
             if ($memberBalance < -0.01) {
                 $user->decrement('reputation_score');
+            } else {
+                $user->increment('reputation_score');
             }
 
             // Recalculate
@@ -137,6 +142,9 @@ class ColocationsController extends Controller
             $colocation->members()->updateExistingPivot($user->id, [
                 'left_at' => now(),
             ]);
+
+            // Owner alone has no debts, so they get +1
+            $user->increment('reputation_score');
 
             return redirect()->route('dashboard')
                 ->with('success', 'Colocation annulée, vous étiez le seul membre.');
@@ -162,15 +170,17 @@ class ColocationsController extends Controller
             $activeMembers = $colocation->members()->wherePivotNull('left_at')->get();
             $memberCount   = $activeMembers->count();
             $totalAmount   = $colocation->expenses()->sum('amount');
-            $share         = $memberCount > 0 ? $totalAmount / $memberCount : 0;
+            // We should use SettlementsController::getBalances for accurate multi-member history
+            $balances = \App\Http\Controllers\SettlementsController::getBalances($colocation);
 
             foreach ($activeMembers as $member) {
-                $memberPaid    = $colocation->expenses()->where('payer_id', $member->id)->sum('amount');
-                $memberBalance = round($memberPaid - $share, 2);
+                $memberBalance = $balances[$member->id] ?? 0;
 
-                // Reputation on cancellation: Only deduct if they owe money
+                // Reputation on cancellation: Deduct if they owe money, Add if they don't
                 if ($memberBalance < -0.01) {
                     $member->decrement('reputation_score');
+                } else {
+                    $member->increment('reputation_score');
                 }
 
                 $colocation->members()->updateExistingPivot($member->id, [
