@@ -18,15 +18,12 @@ Developed as an **individual academic project**, EasyColoc demonstrates modern L
 ard
 
  
- <img width="2880" height="1826" alt="127 0 0 1_8000_dashboard (1)" src="https://github.com/user-attachments/assets/0be0d1a6-321d-42d5-9102-fae550a1d720" />
-
 ---
 
 ## Shared House
 
 
- <img width="2560" height="1600" alt="127 0 0 1_8000_dashboard(Nest Hub Max)" src="https://github.com/user-attachments/assets/6cefe60e-503f-46de-adc8-d3fbbfcee9f1" />
-
+ 
  <img width="2560" height="1600" alt="127 0 0 1_8000_colocations_create(Nest Hub Max)" src="https://github.com/user-attachments/assets/54411ed2-6c54-4e1f-920b-2ba812f88279" />
 
 <img width="2560" height="1992" alt="127 0 0 1_8000_colocations(Nest Hub Max)" src="https://github.com/user-attachments/assets/9a353c32-33c4-43c8-94c0-b48e385b9033" />
@@ -50,8 +47,7 @@ ard
 
 ## Invitations
 
- <img width="2560" height="1600" alt="127 0 0 1_8000_dashboard(Nest Hub Max)" src="https://github.com/user-attachments/assets/2732adac-398b-43a4-948e-4b31908f3dc1" />
-
+ 
 <img width="2560" height="1600" alt="mailtrap io_sandboxes_4807229_messages_5605962776(Nest Hub Max)" src="https://github.com/user-attachments/assets/81b9c0fc-bc5a-48c0-8fed-4aaebb351083" />
 
 
