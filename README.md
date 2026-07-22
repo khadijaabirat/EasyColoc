@@ -1,4 +1,4 @@
-<img width="2560" height="1600" alt="127 0 0 1_8000_colocations_create(Nest Hub Max)" src="https://github.com/user-attachments/assets/dda1047c-7812-4086-bcbe-d2320e1c3495" /># 🏠 EasyColoc — Smart Shared Housing Management Platform
+ # 🏠 EasyColoc — Smart Shared Housing Management Platform
 
 EasyColoc is a full-stack web application developed with **Laravel** to simplify shared housing management by automating expense tracking, debt calculation, reimbursement management, and member collaboration.
 
