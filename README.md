@@ -8,6 +8,7 @@ Developed as an **individual academic project**, EasyColoc demonstrates modern L
 
 ---
 
+
 # 📸 Application Preview
 
 
@@ -77,6 +78,8 @@ ard
   <img width="2560" height="1838" alt="127 0 0 1_8000_colocations_1(Nest Hub Max)" src="https://github.com/user-attachments/assets/e1c959dd-c050-4ca3-aafd-99718235e4cc" />
 
 ---
+
+
 # 📖 Project Overview
 
 Managing expenses in shared housing often leads to manual calculations, misunderstandings, and financial disputes.
@@ -449,5 +452,3 @@ This project was developed for educational purposes as part of the **YouCode Ful
 # 🙏 Acknowledgements
 
 Special thanks to **YouCode** and our instructors for their guidance and continuous support throughout the project development process.
- 
- 
