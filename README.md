@@ -1,4 +1,4 @@
- # 🏠 EasyColoc — Smart Shared Housing Management Platform
+# 🏠 EasyColoc — Smart Shared Housing Management Platform
 
 EasyColoc is a full-stack web application developed with **Laravel** to simplify shared housing management by automating expense tracking, debt calculation, reimbursement management, and member collaboration.
 
